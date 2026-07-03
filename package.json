@@ -8,7 +8,7 @@
     "dev": "nodemon index.js",
     "migrate": "npx prisma migrate dev --name init",
     "generate": "npx prisma generate",
-    "prestart": "npx prisma migrate deploy"
+    "prestart": "npx prisma db push"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
