@@ -48,8 +48,4 @@ setupSocket(io)
 
 server.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`)
-  console.log('Arsitektur : MVC')
-  console.log('Template   : EJS')
-  console.log('Auth       : JWT Token (httpOnly cookie)')
-  console.log('Realtime   : Socket.IO aktif')
 })
