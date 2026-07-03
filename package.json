@@ -1,10 +1,10 @@
 {
-  "name": "debt-tracker",
+  "name": "paydebt",
   "version": "1.0.0",
-  "description": "Aplikasi Utang Piutang - MVC + EJS + JWT - Semester 4",
+  "description": "paydebt uas - Semester 4",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "npx prisma migrate deploy && node index.js",
     "dev": "nodemon index.js",
     "migrate": "npx prisma migrate dev --name init",
     "generate": "npx prisma generate"
