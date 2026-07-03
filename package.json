@@ -4,10 +4,11 @@
   "description": "paydebt uas - Semester 4",
   "main": "index.js",
   "scripts": {
-    "start": "npx prisma migrate deploy && node index.js",
+    "start": "node index.js",
     "dev": "nodemon index.js",
     "migrate": "npx prisma migrate dev --name init",
-    "generate": "npx prisma generate"
+    "generate": "npx prisma generate",
+    "prestart": "npx prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
