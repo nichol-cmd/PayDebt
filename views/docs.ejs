@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokumentasi API - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body { background: var(--bg); }
+    .docs-sidebar {
+      position: sticky; top: 20px;
+      height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+    .docs-sidebar::-webkit-scrollbar { width: 4px; }
+    .docs-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .sidebar-link {
+      display: block; padding: 0.35rem 1rem;
+      font-size: 0.83rem; color: var(--ink-soft);
+      text-decoration: none; border-left: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .sidebar-link:hover { color: var(--accent); border-left-color: var(--accent); background: var(--surface-2); }
+    .sidebar-link.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+    .sidebar-group { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--ink-soft); padding: 1rem 1rem 0.3rem; margin-top: 0.5rem; }
+    .endpoint-card { border-radius: 12px; margin-bottom: 1rem; overflow: hidden; border: 1px solid var(--border); }
+    .endpoint-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.9rem 1.25rem; background: var(--surface);
+      cursor: pointer; transition: background 0.2s;
+    }
+    .endpoint-header:hover { background: var(--surface-2); }
+    .endpoint-body { padding: 1.2rem 1.4rem; background: var(--surface); border-top: 1px solid var(--border); }
+    .method-badge {
+      font-size: 0.72rem; font-weight: 700; padding: 0.25em 0.7em;
+      border-radius: 6px; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .method-get    { background: #dbeafe; color: #1d4ed8; }
+    .method-post   { background: #dcfce7; color: #15803d; }
+    .method-patch  { background: #fef9c3; color: #a16207; }
+    .method-put    { background: #ede9fe; color: #6d28d9; }
+    .method-delete { background: #fee2e2; color: #b91c1c; }
+    .endpoint-path { font-family: monospace; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+    .auth-badge {
+      font-size: 0.7rem; padding: 0.2em 0.6em; border-radius: 20px;
+      font-weight: 600; margin-left: auto;
+    }
+    .auth-required { background: #fee2e2; color: #b91c1c; }
+    .auth-admin    { background: #fef9c3; color: #a16207; }
+    .auth-public   { background: #dcfce7; color: #15803d; }
+    .code-block {
+      background: #1e1b2e; color: #e2e8f0; border-radius: 10px;
+      padding: 1rem 1.2rem; font-family: monospace; font-size: 0.82rem;
+      line-height: 1.6; overflow-x: auto; margin: 0.5rem 0;
+    }
+    .code-block .key   { color: #7dd3fc; }
+    .code-block .val   { color: #86efac; }
+    .code-block .str   { color: #fca5a5; }
+    .code-block .note  { color: #94a3b8; }
+    .param-table th { font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+    .param-table td { font-size: 0.85rem; vertical-align: middle; }
+    .param-table td:first-child { font-family: monospace; font-weight: 600; color: var(--accent); }
+    .required-mark { color: var(--danger); font-weight: 700; }
+    .section-title { font-size: 1.4rem; font-weight: 800; color: var(--ink); margin-bottom: 1rem;
+      padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+    .hero-section { background: linear-gradient(135deg, var(--ink) 0%, #2a2b50 100%);
+      color: white; padding: 3rem 0 2rem; margin-bottom: 2rem; }
+    .base-url-box { background: rgba(255,255,255,0.08); border-radius: 10px;
+      padding: 0.6rem 1rem; font-family: monospace; font-size: 0.9rem;
+      display: inline-block; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<!-- Hero Section -->
+<div class="hero-section">
+  <div class="container">
+    <div class="d-flex align-items-center gap-3 mb-2">
+      <span style="font-size:2rem">💰</span>
+      <div>
+        <h1 class="fw-bold mb-0" style="font-size:1.8rem">PayDebt API</h1>
+        <p class="mb-0" style="opacity:0.75; font-size:0.9rem">Dokumentasi API</p>
+      </div>
+    </div>
+    <div class="mt-3 d-flex gap-3 flex-wrap" style="font-size:0.83rem; opacity:0.8">
+      <span>🔐 Auth: JWT Cookie (httpOnly)</span>
+      <span>📦 Format: JSON</span>
+      <span>🛡️ Rate Limit: 5 req/5 mnt (login)</span>
+    </div>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+
+    <!-- Sidebar navigasi -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="docs-sidebar card p-2">
+        <div class="sidebar-group">Umum</div>
+        <a href="#autentikasi" class="sidebar-link">Autentikasi</a>
+        <a href="#error-codes" class="sidebar-link">Kode Error</a>
+
+        <div class="sidebar-group">Endpoint</div>
+        <a href="#auth" class="sidebar-link">🔑 Auth</a>
+        <a href="#utang" class="sidebar-link">💸 Utang Piutang</a>
+        <a href="#user" class="sidebar-link">👤 User & Profil</a>
+        <a href="#notif" class="sidebar-link">🔔 Notifikasi</a>
+        <a href="#chat" class="sidebar-link">💬 Group Chat</a>
+        <a href="#kontak" class="sidebar-link">📒 Kontak</a>
+        <a href="#laporan" class="sidebar-link">📨 Laporan</a>
+        <a href="#admin" class="sidebar-link">🔐 Admin</a>
+      </div>
+    </div>
+
+    <!-- Konten dokumentasi -->
+    <div class="col-lg-9">
+
+      <!-- Autentikasi -->
+      <section id="autentikasi" class="mb-5">
+        <h2 class="section-title">Cara Autentikasi</h2>
+        <div class="card p-4 mb-3">
+          <p class="mb-2">API ini menggunakan <strong>JWT Token</strong> yang disimpan di <code>httpOnly Cookie</code> bernama <code>token</code>. Cookie ini otomatis terkirim oleh browser di setiap request ke domain yang sama — tidak perlu tambahkan header <code>Authorization</code> secara manual.</p>
+          <p class="mb-1 fw-semibold small">Cara kerja:</p>
+          <ol class="small mb-0">
+            <li>Login lewat <code>POST /login</code></li>
+            <li>Server menyimpan token ke cookie <code>httpOnly</code></li>
+            <li>Semua request selanjutnya otomatis terautentikasi</li>
+            <li>Logout lewat <code>POST /logout</code> untuk hapus cookie</li>
+          </ol>
+        </div>
+        <div class="card p-4">
+          <p class="fw-semibold mb-2 small">Keterangan badge otorisasi:</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="auth-badge auth-public">Publik</span><span class="small">— Tidak perlu login</span>
+            <span class="ms-3 auth-badge auth-required">Login</span><span class="small">— Perlu token JWT</span>
+            <span class="ms-3 auth-badge auth-admin">Admin</span><span class="small">— Perlu role admin</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Error Codes -->
+      <section id="error-codes" class="mb-5">
+        <h2 class="section-title">Kode Respon HTTP</h2>
+        <div class="card p-0">
+          <table class="table param-table mb-0">
+            <thead class="table-light"><tr><th>Kode</th><th>Arti</th></tr></thead>
+            <tbody>
+              <tr><td>200</td><td>Berhasil</td></tr>
+              <tr><td>201</td><td>Data berhasil dibuat</td></tr>
+              <tr><td>400</td><td>Request tidak valid (field kosong, format salah)</td></tr>
+              <tr><td>401</td><td>Belum login / token tidak valid</td></tr>
+              <tr><td>403</td><td>Tidak punya izin (bukan pemilik / bukan admin)</td></tr>
+              <tr><td>404</td><td>Data tidak ditemukan</td></tr>
+              <tr><td>429</td><td>Terlalu banyak percobaan (rate limit)</td></tr>
+              <tr><td>500</td><td>Kesalahan server</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== AUTH ==================== -->
+      <section id="auth" class="mb-5">
+        <h2 class="section-title">🔑 Autentikasi</h2>
+
+        <!-- POST /login -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/login</span>
+            <span class="auth-badge auth-public ms-auto">Publik</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-3">Login dengan email dan password. Maksimal <strong>5 percobaan per 5 menit</strong>.</p>
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"email"</span>: <span class="str">"user@email.com"</span>, <span class="key">"password"</span>: <span class="str">"password123"</span> }</div>
+            <p class="fw-semibold small mb-1 mt-3">Response Sukses</p>
+            <div class="code-block"><span class="note">// Redirect ke /dashboard + cookie "token" diset otomatis</span>
+HTTP 302 → /dashboard</div>
+          </div>
+        </div>
+
+        <!-- POST /register -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/register</span>
+            <span class="auth-badge auth-public ms-auto">Publik</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"name"</span>: <span class="str">"Nama Lengkap"</span>, <span class="key">"email"</span>: <span class="str">"user@email.com"</span>, <span class="key">"password"</span>: <span class="str">"password123"</span> }</div>
+          </div>
+        </div>
+
+        <!-- POST /logout -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/logout</span>
+            <span class="auth-badge auth-public ms-auto">Publik</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-0">Menghapus cookie token. Redirect ke <code>/login</code>.</p>
+          </div>
+        </div>
+
+        <!-- GET /api/auth/me -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/auth/me</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Ambil data user yang sedang login.</p>
+            <p class="fw-semibold small mb-1">Response</p>
+            <div class="code-block">{ <span class="key">"data"</span>: { <span class="key">"id"</span>: <span class="val">1</span>, <span class="key">"name"</span>: <span class="str">"Budi"</span>, <span class="key">"email"</span>: <span class="str">"budi@mail.com"</span>, <span class="key">"role"</span>: <span class="str">"user"</span> } }</div>
+          </div>
+        </div>
+
+        <!-- POST /lupa-password -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/lupa-password</span>
+            <span class="auth-badge auth-public ms-auto">Publik</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Verifikasi identitas dengan email + nama akun. Kalau cocok, tampilkan form ganti password.</p>
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"email"</span>: <span class="str">"user@email.com"</span>, <span class="key">"name"</span>: <span class="str">"Nama Lengkap"</span> }</div>
+          </div>
+        </div>
+
+        <!-- POST /reset-password -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/reset-password</span>
+            <span class="auth-badge auth-public ms-auto">Publik</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"email"</span>: <span class="str">"user@email.com"</span>, <span class="key">"name"</span>: <span class="str">"Nama Lengkap"</span>, <span class="key">"passwordBaru"</span>: <span class="str">"passwordbaru123"</span>, <span class="key">"konfirmasiPassword"</span>: <span class="str">"passwordbaru123"</span> }</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== UTANG ==================== -->
+      <section id="utang" class="mb-5">
+        <h2 class="section-title">💸 Utang Piutang</h2>
+
+        <!-- POST /api/utang -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/utang</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Buat catatan utang/piutang baru. Bisa untuk 1 atau banyak peserta.</p>
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{
+  <span class="key">"judul"</span>: <span class="str">"Patungan makan"</span>,
+  <span class="key">"tipe"</span>: <span class="str">"PIUTANG"</span>, <span class="note">// "HUTANG" atau "PIUTANG"</span>
+  <span class="key">"keterangan"</span>: <span class="str">"Makan siang bareng"</span>, <span class="note">// opsional</span>
+  <span class="key">"deadline"</span>: <span class="str">"2025-12-31"</span>, <span class="note">// opsional</span>
+  <span class="key">"peserta"</span>: [
+    { <span class="key">"userId"</span>: <span class="val">2</span>, <span class="key">"jumlah"</span>: <span class="val">50000</span> },
+    { <span class="key">"userId"</span>: <span class="val">3</span>, <span class="key">"jumlah"</span>: <span class="val">75000</span> }
+  ]
+}</div>
+            <p class="fw-semibold small mb-1 mt-3">Response</p>
+            <div class="code-block">{ <span class="key">"message"</span>: <span class="str">"Utang berhasil dibuat"</span>, <span class="key">"data"</span>: { ... } }</div>
+          </div>
+        </div>
+
+        <!-- PATCH request-lunas -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/utang/:id/request-lunas</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Peserta klaim sudah bayar. <strong>Wajib upload foto bukti transfer</strong> (JPG/PNG, maks 3MB).</p>
+            <p class="fw-semibold small mb-1">Request</p>
+            <div class="code-block"><span class="note">// Content-Type: multipart/form-data</span>
+<span class="key">bukti</span>: [File gambar JPG/PNG]</div>
+            <p class="fw-semibold small mb-1 mt-3">Response</p>
+            <div class="code-block">{ <span class="key">"message"</span>: <span class="str">"Permintaan lunas terkirim ke pembuat"</span> }</div>
+          </div>
+        </div>
+
+        <!-- PATCH konfirmasi -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/utang/:id/konfirmasi/:pesertaId</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-0">Pembuat utang konfirmasi bahwa peserta sudah lunas. Hanya pembuat atau admin yang bisa.</p>
+          </div>
+        </div>
+
+        <!-- DELETE utang -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-delete">DELETE</span>
+            <span class="endpoint-path">/api/utang/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-0">Batalkan/hapus utang. <strong>Hanya pembuat</strong> yang bisa menghapus, admin tidak bisa bypass.</p>
+          </div>
+        </div>
+
+        <!-- GET lihat bukti -->
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/uploads/bukti/:filename</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-0">Lihat foto bukti transfer. Hanya <strong>pemilik foto atau pembuat utang</strong> yang bisa akses. Dilindungi dari path traversal.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== USER ==================== -->
+      <section id="user" class="mb-5">
+        <h2 class="section-title">👤 User & Profil</h2>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/user/search?nama=keyword</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Cari user berdasarkan nama. Hasil tidak menyertakan diri sendiri.</p>
+            <div class="code-block">{ <span class="key">"data"</span>: [{ <span class="key">"id"</span>: <span class="val">2</span>, <span class="key">"name"</span>: <span class="str">"Sari"</span>, <span class="key">"email"</span>: <span class="str">"sari@mail.com"</span> }] }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-put">PUT</span>
+            <span class="endpoint-path">/api/user/profil</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"name"</span>: <span class="str">"Nama Baru"</span>, <span class="key">"bio"</span>: <span class="str">"Bio baru"</span> }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/user/follow/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-0">Follow user lain. Notifikasi real-time dikirim ke user yang difollow.</p>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-delete">DELETE</span>
+            <span class="endpoint-path">/api/user/unfollow/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-0">Unfollow user.</p>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/user/followers/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Ambil daftar followers user tertentu.</p></div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/user/following/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Ambil daftar following user tertentu.</p></div>
+        </div>
+      </section>
+
+      <!-- ==================== NOTIF ==================== -->
+      <section id="notif" class="mb-5">
+        <h2 class="section-title">🔔 Notifikasi</h2>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/notif/jumlah-belum-baca</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <div class="code-block">{ <span class="key">"jumlah"</span>: <span class="val">3</span> }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/notif/baca-semua</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Tandai semua notifikasi sebagai sudah dibaca.</p></div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/notif/:id/baca</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Tandai satu notifikasi sebagai sudah dibaca. Hanya pemilik notifikasi yang bisa.</p></div>
+        </div>
+      </section>
+
+      <!-- ==================== CHAT ==================== -->
+      <section id="chat" class="mb-5">
+        <h2 class="section-title">💬 Group Chat</h2>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/chat</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Ambil semua grup yang diikuti user. Termasuk info apakah ada pesan baru.</p></div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/chat</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"nama"</span>: <span class="str">"Nama Grup"</span>, <span class="key">"anggotaIds"</span>: [<span class="val">2</span>, <span class="val">3</span>] }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/chat/:id/pesan</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Ambil semua pesan di grup. Hanya anggota grup yang bisa akses. Otomatis update lastReadAt.</p></div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/chat/:id/pesan</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"isi"</span>: <span class="str">"Halo semua!"</span> }</div>
+            <p class="small mt-2 mb-0">Pesan langsung di-broadcast ke semua anggota grup lewat Socket.IO.</p>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-delete">DELETE</span>
+            <span class="endpoint-path">/api/chat/:id/keluar</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Keluar dari grup chat.</p></div>
+        </div>
+      </section>
+
+      <!-- ==================== KONTAK ==================== -->
+      <section id="kontak" class="mb-5">
+        <h2 class="section-title">📒 Kontak</h2>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/kontak</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Ambil daftar kontak milik user yang login. Dipakai untuk dropdown di form buat utang.</p></div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/kontak/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body (opsional)</p>
+            <div class="code-block">{ <span class="key">"alias"</span>: <span class="str">"Nama Panggilan"</span> }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-put">PUT</span>
+            <span class="endpoint-path">/api/kontak/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"alias"</span>: <span class="str">"Nama Panggilan Baru"</span> }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-delete">DELETE</span>
+            <span class="endpoint-path">/api/kontak/:id</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Hapus kontak dari daftar.</p></div>
+        </div>
+      </section>
+
+      <!-- ==================== LAPORAN ==================== -->
+      <section id="laporan" class="mb-5">
+        <h2 class="section-title">📨 Laporan Masalah</h2>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/lapor</span>
+            <span class="auth-badge auth-required ms-auto">Login</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"judul"</span>: <span class="str">"Judul Masalah"</span>, <span class="key">"deskripsi"</span>: <span class="str">"Deskripsi lengkap masalahnya..."</span> }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/admin/laporan/:id</span>
+            <span class="auth-badge auth-admin ms-auto">Admin</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"status"</span>: <span class="str">"DIPROSES"</span>, <span class="note">// BARU | DIPROSES | SELESAI</span>
+  <span class="key">"balasanAdmin"</span>: <span class="str">"Sedang ditangani"</span> }</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== ADMIN ==================== -->
+      <section id="admin" class="mb-5">
+        <h2 class="section-title">🔐 Admin</h2>
+        <div class="alert alert-warning small mb-3">Semua endpoint di bagian ini memerlukan role <strong>admin</strong>. User biasa akan mendapat respon 403.</div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/admin/user/:id/role</span>
+            <span class="auth-badge auth-admin ms-auto">Admin</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"role"</span>: <span class="str">"admin"</span> } <span class="note">// "user" atau "admin"</span></div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-patch">PATCH</span>
+            <span class="endpoint-path">/api/admin/user/:id/reset-password</span>
+            <span class="auth-badge auth-admin ms-auto">Admin</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Reset password user ke password acak 8 karakter. Password baru dikembalikan <strong>hanya sekali</strong> di response.</p>
+            <div class="code-block">{ <span class="key">"message"</span>: <span class="str">"Password Budi berhasil direset"</span>, <span class="key">"passwordBaru"</span>: <span class="str">"x8k2mq9p"</span> }</div>
+          </div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-delete">DELETE</span>
+            <span class="endpoint-path">/api/admin/user/:id</span>
+            <span class="auth-badge auth-admin ms-auto">Admin</span>
+          </div>
+          <div class="endpoint-body"><p class="small mb-0">Hapus user beserta semua data terkaitnya (utang, pesan, dll ikut terhapus).</p></div>
+        </div>
+
+        <div class="endpoint-card">
+          <div class="endpoint-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/admin/broadcast</span>
+            <span class="auth-badge auth-admin ms-auto">Admin</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="small mb-2">Kirim pengumuman ke <strong>semua user</strong> sekaligus — disimpan ke database + dikirim real-time lewat Socket.IO.</p>
+            <p class="fw-semibold small mb-1">Request Body</p>
+            <div class="code-block">{ <span class="key">"judul"</span>: <span class="str">"Pemeliharaan Server"</span>, <span class="key">"pesan"</span>: <span class="str">"Server akan maintenance pukul 22.00"</span> }</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Socket.IO Events -->
+      <section id="socket" class="mb-5">
+        <h2 class="section-title">⚡ Real-Time Events (Socket.IO)</h2>
+        <div class="card p-4 mb-3">
+          <p class="small mb-2">Koneksi Socket.IO otomatis terautentikasi lewat cookie JWT yang sama. Tidak perlu kirim token manual.</p>
+          <p class="fw-semibold small mb-1">Events yang diterima client:</p>
+          <table class="table param-table mb-0">
+            <thead class="table-light"><tr><th>Event</th><th>Dikirim saat</th></tr></thead>
+            <tbody>
+              <tr><td>notifikasi_baru</td><td>Ada follow, utang baru, konfirmasi lunas, broadcast admin, pengingat deadline</td></tr>
+              <tr><td>chat_baru</td><td>Ada pesan baru di grup yang diikuti</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="site-footer mt-2">
+  <div class="container">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+      <div class="small text-muted">💰 <strong>PayDebt</strong> — Dokumentasi API</div>
+      <div class="d-flex gap-3 small">
+        <a href="/" class="footer-link">← Kembali ke Aplikasi</a>
+        <span class="text-muted">|</span>
+        <a href="/lapor" class="footer-link">Lapor Masalah</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Aktifkan dark mode kalau sudah diset sebelumnya
+  const tema = localStorage.getItem('theme') || 'light'
+  document.documentElement.setAttribute('data-theme', tema)
+
+  // Highlight sidebar link aktif saat scroll
+  const sections = document.querySelectorAll('section[id]')
+  const links    = document.querySelectorAll('.sidebar-link')
+  window.addEventListener('scroll', () => {
+    let current = ''
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id
+    })
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current)
+    })
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <%- include('partials/theme-init') %>
+  <title>Group Chat - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/navbar', { page: 'chat', user }) %>
+
+<div class="container my-4">
+  <div class="row g-3">
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Grup Saya</span>
+          <button class="btn btn-sm btn-primary" onclick="toggleForm()">+ Buat</button>
+        </div>
+        <div id="listGrup" class="list-group list-group-flush">
+          <% if (groups.length === 0) { %>
+            <div class="list-group-item text-muted small">Belum ada grup</div>
+          <% } else { %>
+            <% groups.forEach(g => { %>
+              <button class="list-group-item list-group-item-action <%= g.adaPesanBaru ? 'list-group-item-warning' : '' %>"
+                onclick="bukaGrup(<%= g.group.id %>, '<%= g.group.nama %>')">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-semibold"><%= g.group.nama %></span>
+                  <% if (g.adaPesanBaru) { %><span class="badge bg-danger">Baru</span><% } %>
+                </div>
+                <div class="small text-muted">
+                  <%= g.group._count.anggota %> anggota
+                  <% if (g.group.pesan[0]) { %>
+                    &bull; <%= g.group.pesan[0].sender.name %>: <%= g.group.pesan[0].isi.substring(0, 20) %>...
+                  <% } %>
+                </div>
+              </button>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="card mt-3 d-none" id="formGrupBox">
+        <div class="card-body">
+          <h6 class="fw-bold">Buat Grup Baru</h6>
+          <input type="text" class="form-control form-control-sm mb-2" id="namaGrup" placeholder="Nama grup">
+          <input type="text" class="form-control form-control-sm mb-2" id="cariAnggota" placeholder="Cari anggota...">
+          <div id="hasilCariAnggota" class="list-group mb-2"></div>
+          <div id="anggotaDipilih" class="small text-muted mb-2">Belum ada anggota dipilih</div>
+          <button class="btn btn-primary btn-sm w-100" onclick="buatGrup()">Buat Grup</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header" id="headerGrup">Pilih grup untuk mulai chat</div>
+        <div class="card-body p-3">
+          <div id="chatWrap" class="chat-wrap mb-3">
+            <div class="text-muted text-center small mt-5">Pilih grup dulu</div>
+          </div>
+          <div class="input-group">
+            <input type="text" class="form-control" id="inputPesan"
+              placeholder="Ketik pesan..." onkeydown="if(event.key==='Enter') kirimPesan()">
+            <button class="btn btn-primary" onclick="kirimPesan()">Kirim</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  const myId      = <%= user.id %>
+  let grupAktif   = null
+  let anggotaBaru = []
+
+  mulaiPolling()
+
+  window.onPesanBaruRealtime = function(data) {
+    const p = data.pesan
+    if (data.groupId === grupAktif && p.sender.id !== myId) {
+      const box    = document.getElementById('chatWrap')
+      const bubble = document.createElement('div')
+      bubble.className = `bubble orang`
+      bubble.innerHTML = `
+        <div class="bubble-nama">${p.sender.name}</div>
+        <div class="bubble-isi">${p.isi}</div>
+      `
+      
+      const kosong = box.querySelector('.text-muted')
+      if (kosong) kosong.remove()
+
+      box.appendChild(bubble)
+      box.scrollTop = box.scrollHeight
+    }
+    refreshListGrup()
+  }
+
+  document.getElementById('cariAnggota').addEventListener('input', async function() {
+    const keyword = this.value
+    if (!keyword) { document.getElementById('hasilCariAnggota').innerHTML = ''; return }
+    const res  = await fetch(`/api/user/search?nama=${keyword}`)
+    const json = await res.json()
+    document.getElementById('hasilCariAnggota').innerHTML = json.data.map(u => `
+      <button type="button" class="list-group-item list-group-item-action small"
+        onclick="tambahAnggota(${u.id}, '${u.name}')">
+        ${u.name} <span class="text-muted">${u.email}</span>
+      </button>
+    `).join('')
+  })
+
+  async function bukaGrup(id, nama) {
+    grupAktif = id
+    document.getElementById('headerGrup').textContent = nama
+    const res  = await fetch(`/api/chat/${id}/pesan`)
+    const json = await res.json()
+    const box  = document.getElementById('chatWrap')
+
+    if (json.data.length === 0) {
+      box.innerHTML = '<div class="text-muted text-center small mt-5">Belum ada pesan</div>'
+      return
+    }
+    box.innerHTML = json.data.map(p => `
+      <div class="bubble ${p.sender.id === myId ? 'saya' : 'orang'}">
+        <div class="bubble-nama">${p.sender.id === myId ? 'Saya' : p.sender.name}</div>
+        <div class="bubble-isi">${p.isi}</div>
+      </div>
+    `).join('')
+    box.scrollTop = box.scrollHeight
+
+    refreshListGrup()
+  }
+
+  async function refreshListGrup() {
+    const res  = await fetch('/api/chat')
+    const json = await res.json()
+    const el   = document.getElementById('listGrup')
+    el.innerHTML = json.data.map(g => `
+      <button class="list-group-item list-group-item-action ${g.adaPesanBaru ? 'list-group-item-warning' : ''}"
+        onclick="bukaGrup(${g.group.id}, '${g.group.nama}')">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">${g.group.nama}</span>
+          ${g.adaPesanBaru ? '<span class="badge bg-danger">Baru</span>' : ''}
+        </div>
+        <div class="small text-muted">${g.group._count.anggota} anggota</div>
+      </button>
+    `).join('') || '<div class="list-group-item text-muted small">Belum ada grup</div>'
+  }
+
+  async function kirimPesan() {
+    if (!grupAktif) return tampilToast('Peringatan', 'Pilih grup dulu', 'warning')
+    const isi = document.getElementById('inputPesan').value.trim()
+    if (!isi) return
+    await fetch(`/api/chat/${grupAktif}/pesan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isi })
+    })
+    document.getElementById('inputPesan').value = ''
+    bukaGrup(grupAktif, document.getElementById('headerGrup').textContent)
+  }
+
+  function toggleForm() {
+    document.getElementById('formGrupBox').classList.toggle('d-none')
+  }
+
+  function tambahAnggota(id, nama) {
+    if (anggotaBaru.find(a => a.id === id)) return
+    anggotaBaru.push({ id, nama })
+    document.getElementById('hasilCariAnggota').innerHTML = ''
+    document.getElementById('cariAnggota').value = ''
+    document.getElementById('anggotaDipilih').textContent = 'Dipilih: ' + anggotaBaru.map(a => a.nama).join(', ')
+  }
+
+  async function buatGrup() {
+    const nama = document.getElementById('namaGrup').value
+    if (!nama) return tampilToast('Peringatan', 'Nama grup harus diisi', 'warning')
+    const res  = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nama, anggotaIds: anggotaBaru.map(a => a.id) })
+    })
+    if (res.ok) {
+      tampilToast('Berhasil', 'Grup baru telah dibuat', 'success')
+      setTimeout(() => location.reload(), 1000)
+    } else {
+      const data = await res.json()
+      tampilToast('Gagal', data.message, 'danger')
+    }
+  }
+</script>
+</body>
+</html>

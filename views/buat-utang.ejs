@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <%- include('partials/theme-init') %>
+  <title>Buat Utang - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/navbar', { page: 'buat-utang', user }) %>
+
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header">Buat Catatan Utang</div>
+        <div class="card-body">
+          <div id="pesan" class="alert d-none"></div>
+
+          <div class="mb-3">
+            <label class="form-label">Judul</label>
+            <input type="text" class="form-control" id="judul" placeholder="cth: Patungan makan">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Keterangan (opsional)</label>
+            <textarea class="form-control" id="keterangan" rows="2"></textarea>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipe</label>
+              <select class="form-select" id="tipe">
+                <option value="">-- Pilih --</option>
+                <option value="PIUTANG">PIUTANG (orang lain hutang ke saya)</option>
+                <option value="HUTANG">HUTANG (saya yang hutang)</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Deadline</label>
+              <input type="date" class="form-control" id="deadline">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Tambah Peserta</label>
+
+            <!-- Pilih langsung dari Kontak yang sudah disimpan -->
+            <div class="mb-2">
+              <select class="form-select" id="dropdownKontak" onchange="pilihDariDropdown(this)">
+                <option value="">-- Pilih dari Kontak --</option>
+              </select>
+              <div class="small text-muted mt-1">
+                Belum ada kontak yang cocok? <a href="/kontak" target="_blank">Kelola Kontak</a>
+                atau cari manual di bawah.
+              </div>
+            </div>
+
+            <!-- Atau cari user lain yang belum jadi kontak -->
+            <div class="input-group">
+              <input type="text" class="form-control" id="inputCari" placeholder="Cari nama user...">
+              <button class="btn btn-outline-secondary" onclick="cariUser()">Cari</button>
+            </div>
+            <div id="hasilCari" class="list-group mt-1"></div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Peserta Dipilih</label>
+            <div id="listPeserta"><span class="text-muted small">Belum ada peserta</span></div>
+          </div>
+
+          <button class="btn btn-primary w-100" onclick="simpanUtang()">Simpan Utang</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  mulaiPolling()
+  loadDropdownKontak()
+  let peserta = []
+
+  // muat daftar kontak ke dropdown begitu halaman dibuka
+  async function loadDropdownKontak() {
+    const res  = await fetch('/api/kontak')
+    const data = await res.json()
+    const dropdown = document.getElementById('dropdownKontak')
+
+    if (data.data.length === 0) {
+      dropdown.innerHTML = '<option value="">-- Belum ada kontak --</option>'
+      return
+    }
+
+    dropdown.innerHTML = '<option value="">-- Pilih dari Kontak --</option>' +
+      data.data.map(k => `
+        <option value="${k.kontak.id}" data-nama="${k.alias || k.kontak.name}">
+          ${k.alias || k.kontak.name}${k.alias ? ' (' + k.kontak.name + ')' : ''}
+        </option>
+      `).join('')
+  }
+
+  // dipanggil saat user pilih salah satu opsi di dropdown kontak
+  function pilihDariDropdown(select) {
+    const id   = select.value
+    if (!id) return
+
+    const opsiTerpilih = select.options[select.selectedIndex]
+    const nama = opsiTerpilih.dataset.nama
+
+    pilihUser(parseInt(id), nama)
+    select.value = '' // reset dropdown ke pilihan default
+  }
+
+  async function cariUser() {
+    const keyword = document.getElementById('inputCari').value
+    if (!keyword) return
+    const res  = await fetch(`/api/user/search?nama=${keyword}`)
+    const data = await res.json()
+    const el   = document.getElementById('hasilCari')
+
+    if (data.data.length === 0) {
+      el.innerHTML = '<div class="list-group-item small text-muted">Tidak ditemukan</div>'
+      return
+    }
+    el.innerHTML = data.data.map(u => `
+      <button type="button" class="list-group-item list-group-item-action small"
+        onclick="pilihUser(${u.id}, '${u.name}')">
+        ${u.name} <span class="text-muted">${u.email}</span>
+      </button>
+    `).join('')
+  }
+
+  function pilihUser(id, nama) {
+    if (peserta.find(p => p.userId === id)) { tampilToast('Peringatan', 'User ini sudah ditambahkan', 'warning'); return }
+    peserta.push({ userId: id, nama, jumlah: 0 })
+    document.getElementById('hasilCari').innerHTML = ''
+    document.getElementById('inputCari').value = ''
+    renderPeserta()
+  }
+
+  function hapusPeserta(id) {
+    peserta = peserta.filter(p => p.userId !== id)
+    renderPeserta()
+  }
+
+  function renderPeserta() {
+    const el = document.getElementById('listPeserta')
+    if (peserta.length === 0) {
+      el.innerHTML = '<span class="text-muted small">Belum ada peserta</span>'
+      return
+    }
+    el.innerHTML = peserta.map(p => `
+      <div class="d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+        <span class="flex-grow-1 small fw-semibold">${p.nama}</span>
+        <input type="number" class="form-control form-control-sm" style="width:160px"
+          placeholder="Jumlah (Rp)" min="1" step="1" inputmode="numeric"
+          onchange="updateJumlah(${p.userId}, this.value)"
+          onkeydown="if(event.key === '-' || event.key === 'e') event.preventDefault()">
+        <button class="btn btn-sm btn-outline-danger" onclick="hapusPeserta(${p.userId})">✕</button>
+      </div>
+    `).join('')
+  }
+
+  function updateJumlah(id, val) {
+    const p = peserta.find(p => p.userId === id)
+    if (p) p.jumlah = parseFloat(val) || 0
+  }
+
+  async function simpanUtang() {
+    const judul = document.getElementById('judul').value
+    const tipe  = document.getElementById('tipe').value
+
+    if (!judul || !tipe || peserta.length === 0) {
+      tampilPesan('pesan', 'warning', 'Judul, tipe, dan minimal 1 peserta harus diisi')
+      return
+    }
+
+    // VALIDASI NOMINAL: harus angka, tidak boleh kosong/negatif/nol
+    for (const p of peserta) {
+      if (isNaN(p.jumlah) || p.jumlah === null || p.jumlah === undefined) {
+        tampilPesan('pesan', 'warning', `Jumlah untuk ${p.nama} harus berupa angka`)
+        return
+      }
+      if (p.jumlah <= 0) {
+        tampilPesan('pesan', 'warning', `Jumlah untuk ${p.nama} tidak boleh nol atau negatif`)
+        return
+      }
+    }
+
+    const body = {
+      judul,
+      keterangan: document.getElementById('keterangan').value,
+      tipe,
+      deadline: document.getElementById('deadline').value || null,
+      peserta: peserta.map(p => ({ userId: p.userId, jumlah: p.jumlah }))
+    }
+
+    const res  = await fetch('/api/utang', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const data = await res.json()
+
+    if (res.ok) {
+      tampilPesan('pesan', 'success', 'Utang berhasil disimpan!')
+      setTimeout(() => window.location.href = '/dashboard', 1200)
+    } else {
+      tampilPesan('pesan', 'danger', data.message)
+    }
+  }
+</script>
+</body>
+</html>

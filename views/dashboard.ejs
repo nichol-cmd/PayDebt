@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <%- include('partials/theme-init') %>
+  <title>Dashboard - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/navbar', { page: 'dashboard', user }) %>
+
+<div class="container my-4">
+  <h5 class="fw-bold mb-4">Dashboard</h5>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="summary-card bg-hutang">
+        <p>Total Hutang Saya</p>
+        <h4>Rp <%= data.totalHutang.toLocaleString('id-ID') %></h4>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="summary-card bg-piutang">
+        <p>Total Piutang Saya</p>
+        <h4>Rp <%= data.totalPiutang.toLocaleString('id-ID') %></h4>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="summary-card bg-selisih">
+        <p>Selisih</p>
+        <h4>Rp <%= data.selisih.toLocaleString('id-ID') %></h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- HUTANG SAYA (sebagai peserta) -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">🔴 Hutang Saya (Belum Lunas)</div>
+        <% if (data.hutang.length === 0) { %>
+          <div class="list-item text-muted">Tidak ada hutang aktif 🎉</div>
+        <% } else { %>
+          <% data.hutang.forEach(p => { %>
+            <div class="list-item" id="hutang-<%= p.utang.id %>">
+              <div class="fw-semibold"><%= p.utang.judul %></div>
+              <div class="small text-muted">Kepada: <%= p.utang.pembuat.name %></div>
+              <div class="small text-muted">Deadline: <%= p.utang.deadline ? new Date(p.utang.deadline).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '-' %></div>
+              <div class="d-flex justify-content-between align-items-center mt-1">
+                <span class="fw-bold text-danger">Rp <%= p.jumlah.toLocaleString('id-ID') %></span>
+                <% if (p.requestLunas) { %>
+                  <span class="badge badge-request">Menunggu Konfirmasi</span>
+                <% } else { %>
+                  <button class="btn btn-sm btn-outline-success" onclick="toggleFormBukti(<%= p.utang.id %>)">
+                    Tandai Sudah Bayar
+                  </button>
+                <% } %>
+              </div>
+
+              <!-- Form upload bukti transfer, muncul setelah klik "Tandai Sudah Bayar" -->
+              <% if (!p.requestLunas) { %>
+              <div class="form-bukti d-none mt-2" id="formBukti-<%= p.utang.id %>">
+                <label class="form-label small mb-1">Upload bukti transfer <span class="text-danger">*wajib</span> (JPG/PNG)</label>
+                <input type="file" class="form-control form-control-sm mb-1"
+                  accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                  id="fileBukti-<%= p.utang.id %>" onchange="cekFileBukti(<%= p.utang.id %>)">
+
+                <!-- Preview foto + tombol hapus, muncul setelah file dipilih -->
+                <div class="d-none align-items-center gap-2 mb-2 mt-2" id="previewWrap-<%= p.utang.id %>">
+                  <img id="previewImg-<%= p.utang.id %>" class="preview-bukti" alt="Preview bukti">
+                  <div class="flex-grow-1 small text-success" id="namaFile-<%= p.utang.id %>"></div>
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="hapusFileBukti(<%= p.utang.id %>)">
+                    ✕ Hapus
+                  </button>
+                </div>
+                <div class="small text-muted mb-2" id="belumAdaFile-<%= p.utang.id %>">Belum ada file dipilih</div>
+
+                <button class="btn btn-sm btn-success w-100" id="btnKirim-<%= p.utang.id %>" disabled
+                  onclick="kirimRequestLunas(<%= p.utang.id %>)">
+                  Kirim Klaim Pembayaran
+                </button>
+              </div>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- PIUTANG SAYA (sebagai pembuat) -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">🟢 Piutang Saya (Belum Lunas)</div>
+        <% if (data.piutang.length === 0) { %>
+          <div class="list-item text-muted">Tidak ada piutang aktif</div>
+        <% } else { %>
+          <% data.piutang.forEach(u => { %>
+            <div class="list-item">
+              <div class="fw-semibold"><%= u.judul %></div>
+              <div class="small text-muted">Deadline: <%= u.deadline ? new Date(u.deadline).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '-' %></div>
+              <div class="mt-2">
+                <% u.peserta.forEach(p => { %>
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small">
+                      <%= p.user.name %> — Rp <%= p.jumlah.toLocaleString('id-ID') %>
+                      <% if (p.requestLunas && !p.sudahBayar) { %>
+                        <span class="badge badge-request ms-1">Minta Konfirmasi</span>
+                      <% } %>
+                    </span>
+                    <div class="d-flex align-items-center gap-1">
+                      <% if (p.buktiTransfer) { %>
+                        <a href="<%= p.buktiTransfer %>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                          📎 Lihat Bukti
+                        </a>
+                      <% } %>
+                      <% if (p.sudahBayar) { %>
+                        <span class="badge badge-lunas">Lunas ✓</span>
+                      <% } else { %>
+                        <button class="btn btn-sm btn-success" onclick="konfirmasiLunas(<%= u.id %>, <%= p.userId %>)">
+                          Konfirmasi Lunas
+                        </button>
+                      <% } %>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  mulaiPolling()
+
+  // tampilkan/sembunyikan form upload bukti transfer
+  function toggleFormBukti(utangId) {
+    document.getElementById(`formBukti-${utangId}`).classList.toggle('d-none')
+  }
+
+  // cek apakah file sudah dipilih, baru tombol "Kirim Klaim Pembayaran" bisa diklik
+  function cekFileBukti(utangId) {
+    const fileInput     = document.getElementById(`fileBukti-${utangId}`)
+    const btnKirim      = document.getElementById(`btnKirim-${utangId}`)
+    const namaFile      = document.getElementById(`namaFile-${utangId}`)
+    const previewWrap   = document.getElementById(`previewWrap-${utangId}`)
+    const previewImg    = document.getElementById(`previewImg-${utangId}`)
+    const belumAdaFile  = document.getElementById(`belumAdaFile-${utangId}`)
+
+    const file = fileInput.files[0]
+    if (!file) {
+      kosongkanFileBukti(utangId)
+      return
+    }
+
+    const tipeValid = ['image/jpeg', 'image/png'].includes(file.type)
+    if (!tipeValid) {
+      tampilToast('Format Tidak Didukung', 'Hanya file JPG atau PNG yang diperbolehkan', 'warning')
+      fileInput.value = ''
+      kosongkanFileBukti(utangId)
+      return
+    }
+
+    btnKirim.disabled = false
+    namaFile.textContent = `📎 ${file.name}`
+    belumAdaFile.classList.add('d-none')
+    previewWrap.classList.remove('d-none')
+    previewWrap.classList.add('d-flex')
+
+    const reader = new FileReader()
+    reader.onload = (e) => { previewImg.src = e.target.result }
+    reader.readAsDataURL(file)
+  }
+
+  function hapusFileBukti(utangId) {
+    const fileInput = document.getElementById(`fileBukti-${utangId}`)
+    fileInput.value = '' 
+    kosongkanFileBukti(utangId)
+  }
+
+  function kosongkanFileBukti(utangId) {
+    document.getElementById(`btnKirim-${utangId}`).disabled = true
+    document.getElementById(`previewWrap-${utangId}`).classList.add('d-none')
+    document.getElementById(`previewWrap-${utangId}`).classList.remove('d-flex')
+    document.getElementById(`belumAdaFile-${utangId}`).classList.remove('d-none')
+  }
+
+  async function kirimRequestLunas(utangId) {
+    const fileInput = document.getElementById(`fileBukti-${utangId}`)
+
+    if (!fileInput.files[0]) {
+      tampilToast('Belum Lengkap', 'Upload bukti transfer dulu sebelum kirim klaim', 'warning')
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('bukti', fileInput.files[0])
+
+    const res = await fetch(`/api/utang/${utangId}/request-lunas`, {
+      method: 'PATCH',
+      body: formData
+      
+    })
+    const data = await res.json()
+    tampilNotifApi(res.ok, data.message)
+
+    if (res.ok) setTimeout(() => location.reload(), 1200)
+  }
+
+  async function konfirmasiLunas(utangId, pesertaId) {
+    if (!confirm('Konfirmasi pembayaran peserta ini?')) return
+    const res  = await fetch(`/api/utang/${utangId}/konfirmasi/${pesertaId}`, { method: 'PATCH' })
+    const data = await res.json()
+    tampilNotifApi(res.ok, data.message)
+
+    if (res.ok) setTimeout(() => location.reload(), 1200)
+  }
+</script>
+</body>
+</html>

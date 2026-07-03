@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Register - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="card">
+      <div class="card-body">
+        <div class="text-center mb-4">
+          <span class="auth-logo">💰</span>
+          <h5 class="fw-bold mb-1">PayDebt</h5>
+          <p class="text-muted small">Buat akun baru</p>
+        </div>
+
+        <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+        <% if (success) { %><div class="alert alert-success"><%= success %></div><% } %>
+
+        <form action="/register" method="POST" id="formRegister" novalidate>
+          <div class="mb-3">
+            <label class="form-label">Nama</label>
+            <input type="text" name="name" class="form-control" placeholder="Nama lengkap" required>
+          </div>
+
+          <!-- Email: hanya bisa diisi format email yang valid -->
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input
+              type="email"
+              name="email"
+              id="email"
+              class="form-control"
+              placeholder="contoh@email.com"
+              pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+              title="Masukkan format email yang valid, contoh: nama@email.com"
+              required>
+            <div class="invalid-feedback-custom" id="emailFeedback"></div>
+          </div>
+
+          <!-- Password dengan tombol mata + indikator kekuatan -->
+          <div class="mb-2">
+            <label class="form-label">Password</label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                name="password"
+                id="password"
+                class="form-control"
+                placeholder="Minimal 6 karakter"
+                minlength="6"
+                required
+                oninput="cekKekuatanPassword()">
+              <button type="button" class="password-toggle" id="toggleMata" onclick="toggleLihatPassword()">
+                <i class="bi bi-eye-slash" id="iconMata"></i>
+              </button>
+            </div>
+
+            <!-- Indikator kekuatan password -->
+            <div class="strength-bar mt-2">
+              <div class="strength-fill" id="strengthFill"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <small class="text-muted">Kekuatan password:</small>
+              <small id="strengthLabel" class="fw-semibold text-muted">-</small>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 mt-3">Daftar</button>
+        </form>
+
+        <p class="text-center mt-3 mb-0 small">
+          Sudah punya akun? <a href="/login">Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleLihatPassword() {
+    const input = document.getElementById('password')
+    const icon  = document.getElementById('iconMata')
+
+    if (input.type === 'password') {
+      input.type = 'text'
+      icon.classList.remove('bi-eye-slash')
+      icon.classList.add('bi-eye')
+    } else {
+      input.type = 'password'
+      icon.classList.remove('bi-eye')
+      icon.classList.add('bi-eye-slash')
+    }
+  }
+
+  function cekKekuatanPassword() {
+    const password = document.getElementById('password').value
+    const fill      = document.getElementById('strengthFill')
+    const label     = document.getElementById('strengthLabel')
+
+    if (password.length === 0) {
+      fill.style.width = '0%'
+      fill.className = 'strength-fill'
+      label.textContent = '-'
+      label.className = 'fw-semibold text-muted'
+      return
+    }
+
+    let skor = 0
+    if (password.length >= 8) skor++
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) skor++
+    if (/[0-9]/.test(password)) skor++
+    if (/[^a-zA-Z0-9]/.test(password)) skor++
+
+    if (skor <= 1) {
+      fill.style.width = '33%'
+      fill.className = 'strength-fill strength-weak'
+      label.textContent = 'Lemah'
+      label.className = 'fw-semibold text-danger'
+    } else if (skor <= 3) {
+      fill.style.width = '66%'
+      fill.className = 'strength-fill strength-medium'
+      label.textContent = 'Sedang'
+      label.className = 'fw-semibold text-warning'
+    } else {
+      fill.style.width = '100%'
+      fill.className = 'strength-fill strength-strong'
+      label.textContent = 'Kuat'
+      label.className = 'fw-semibold text-success'
+    }
+  }
+
+  document.getElementById('email').addEventListener('input', function() {
+    const feedback = document.getElementById('emailFeedback')
+    if (this.value && !this.checkValidity()) {
+      feedback.textContent = 'Format email tidak valid'
+      feedback.classList.add('show')
+      this.classList.add('is-invalid-custom')
+    } else {
+      feedback.classList.remove('show')
+      this.classList.remove('is-invalid-custom')
+    }
+  })
+</script>
+</body>
+</html>

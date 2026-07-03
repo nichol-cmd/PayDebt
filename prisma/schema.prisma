@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  bio       String?
+  role      String   @default("user") // "user" atau "admin"
+  createdAt DateTime @default(now())
+
+  followers  Follow[]       @relation("Following")
+  following  Follow[]       @relation("Follower")
+  utang      Utang[]        @relation("Pembuat")
+  ikutUtang  UtangPeserta[]
+  notif      Notifikasi[]
+  histori    Histori[]
+  buatGroup  Group[]        @relation("BuatGroup")
+  ikutGroup  GroupMember[]
+  pesan      Pesan[]
+  kontakSaya   Kontak[]     @relation("PemilikKontak")
+  dikontakOleh Kontak[]     @relation("DijadikanKontak")
+  laporan      Laporan[]
+
+  @@map("users")
+}
+
+// Manajemen Kontak - daftar "teman" pribadi milik tiap user
+// Beda dengan Follow (sosial), Kontak ini lebih ke "address book"
+// supaya gampang dipilih lewat dropdown saat bikin hutang/piutang
+model Kontak {
+  id        Int      @id @default(autoincrement())
+  userId    Int      // pemilik daftar kontak
+  kontakId  Int      // user yang disimpan jadi kontak
+  alias     String?  // nama panggilan custom, opsional
+  createdAt DateTime @default(now())
+
+  user   User @relation("PemilikKontak",   fields: [userId],   references: [id], onDelete: Cascade)
+  kontak User @relation("DijadikanKontak", fields: [kontakId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kontakId])
+  @@map("kontak")
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower",  fields: [followerId],  references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Utang {
+  id          Int       @id @default(autoincrement())
+  judul       String
+  keterangan  String?
+  totalAmount Float
+  tipe        String    // "HUTANG" atau "PIUTANG"
+  status      String    @default("BELUM_LUNAS")
+  deadline    DateTime?
+  createdAt   DateTime  @default(now())
+  pembuatId   Int
+
+  pembuat User           @relation("Pembuat", fields: [pembuatId], references: [id], onDelete: Cascade)
+  peserta UtangPeserta[]
+  histori Histori[]
+  notif   Notifikasi[]
+
+  @@map("utang")
+}
+
+model UtangPeserta {
+  id            Int       @id @default(autoincrement())
+  utangId       Int
+  userId        Int
+  jumlah        Float
+  sudahBayar    Boolean   @default(false)
+  requestLunas  Boolean   @default(false)
+  buktiTransfer String?   // path file bukti transfer/pembayaran
+  reminderSent  Boolean   @default(false) // sudah dikirimi notif pengingat deadline atau belum
+  bayarAt       DateTime?
+  catatan       String?
+
+  utang Utang @relation(fields: [utangId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId],  references: [id], onDelete: Cascade)
+
+  @@unique([utangId, userId])
+  @@map("utang_peserta")
+}
+
+model Histori {
+  id        Int      @id @default(autoincrement())
+  utangId   Int
+  userId    Int
+  aksi      String
+  createdAt DateTime @default(now())
+
+  utang Utang @relation(fields: [utangId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId],  references: [id], onDelete: Cascade)
+
+  @@map("histori")
+}
+
+model Notifikasi {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  utangId   Int?
+  judul     String
+  pesan     String
+  sudahBaca Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId],  references: [id], onDelete: Cascade)
+  utang Utang? @relation(fields: [utangId], references: [id], onDelete: SetNull)
+
+  @@map("notifikasi")
+}
+
+model Group {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  deskripsi String?
+  creatorId Int
+  createdAt DateTime @default(now())
+
+  creator User          @relation("BuatGroup", fields: [creatorId], references: [id])
+  anggota GroupMember[]
+  pesan   Pesan[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id         Int      @id @default(autoincrement())
+  groupId    Int
+  userId     Int
+  role       String   @default("member")
+  joinAt     DateTime @default(now())
+  lastReadAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId],  references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model Pesan {
+  id        Int      @id @default(autoincrement())
+  groupId   Int
+  senderId  Int
+  isi       String   @db.Text
+  createdAt DateTime @default(now())
+
+  group  Group @relation(fields: [groupId],  references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("pesan")
+}
+
+// Laporan masalah dari user ke admin
+model Laporan {
+  id           Int      @id @default(autoincrement())
+  userId       Int      // pelapor
+  judul        String
+  deskripsi    String   @db.Text
+  status       String   @default("BARU") // BARU, DIPROSES, SELESAI
+  balasanAdmin String?  @db.Text         // tanggapan admin, opsional
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("laporan")
+}
+
+

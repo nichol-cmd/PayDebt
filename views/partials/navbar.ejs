@@ -1,0 +1,73 @@
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/dashboard">PayDebt</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'dashboard' ? 'active' : '' %>" href="/dashboard">Dashboard</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'rekap' ? 'active' : '' %>" href="/rekap">Rekap</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'buat-utang' ? 'active' : '' %>" href="/buat-utang">Buat Utang</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'kontak' ? 'active' : '' %>" href="/kontak">Kontak</a>
+        </li>
+        <li class="nav-item" style="position:relative">
+          <a class="nav-link <%= page === 'notif' ? 'active' : '' %>" href="/notif">
+            Notifikasi
+            <span id="notifDot" class="dot-merah"></span>
+          </a>
+        </li>
+        <li class="nav-item" style="position:relative">
+          <a class="nav-link <%= page === 'chat' ? 'active' : '' %>" href="/chat">
+            Group Chat
+            <span id="chatDot" class="dot-merah"></span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'profil' ? 'active' : '' %>" href="/profil">Profil</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'lapor' ? 'active' : '' %>" href="/lapor">Lapor Masalah</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= page === 'docs' ? 'active' : '' %>" href="/docs">📄 API Docs</a>
+        </li>
+
+        <% if (user.role === 'admin') { %>
+        <li class="nav-item">
+          <a class="nav-link text-warning fw-semibold <%= page === 'admin' ? 'active' : '' %>" href="/admin">
+            🔐 Admin
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-warning <%= page === 'admin-laporan' ? 'active' : '' %>" href="/admin/laporan">
+            📨 Laporan Masuk
+          </a>
+        </li>
+        <% } %>
+      </ul>
+
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="toggleTheme()" title="Ganti tema terang/gelap">
+          <span id="themeIcon">🌙</span>
+        </button>
+        <span class="text-white small">
+          <%= user.name %>
+          <% if (user.role === 'admin') { %>
+            <span class="badge bg-danger ms-1" style="font-size:10px">Admin</span>
+          <% } %>
+        </span>
+        <form action="/logout" method="POST" class="d-inline">
+          <button type="submit" class="btn btn-outline-light btn-sm">Keluar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</nav>

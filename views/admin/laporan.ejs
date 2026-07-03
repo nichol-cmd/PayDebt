@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <%- include('../partials/theme-init') %>
+  <title>Laporan Masuk - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('../partials/navbar', { page: 'admin-laporan', user }) %>
+
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h5 class="fw-bold mb-0">Laporan Masuk</h5>
+      <small class="text-muted">Semua laporan masalah dari user</small>
+    </div>
+    <a href="/admin" class="btn btn-sm btn-outline-secondary">← Kembali ke Admin Panel</a>
+  </div>
+
+  <div id="listLaporan">
+    <% if (laporan.length === 0) { %>
+      <p class="text-muted">Belum ada laporan masuk.</p>
+    <% } else { %>
+      <% laporan.forEach(l => { %>
+        <div class="card mb-3" id="laporan-<%= l.id %>">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="fw-bold mb-1"><%= l.judul %></h6>
+                <div class="small text-muted">
+                  Dari: <%= l.user.name %> (<%= l.user.email %>) &bull;
+                  <%= new Date(l.createdAt).toLocaleString('id-ID', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) %>
+                </div>
+              </div>
+              <span class="badge <%= l.status === 'SELESAI' ? 'badge-lunas' : l.status === 'DIPROSES' ? 'badge-sebagian' : 'badge-belum' %>" id="statusBadge-<%= l.id %>">
+                <%= l.status %>
+              </span>
+            </div>
+            <div class="small mt-2"><%= l.deskripsi %></div>
+
+            <hr class="my-2">
+
+            <div class="row g-2">
+              <div class="col-md-3">
+                <label class="form-label small">Ubah Status</label>
+                <select class="form-select form-select-sm" id="status-<%= l.id %>">
+                  <option value="BARU"     <%= l.status === 'BARU'     ? 'selected' : '' %>>BARU</option>
+                  <option value="DIPROSES" <%= l.status === 'DIPROSES' ? 'selected' : '' %>>DIPROSES</option>
+                  <option value="SELESAI"  <%= l.status === 'SELESAI'  ? 'selected' : '' %>>SELESAI</option>
+                </select>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label small">Balasan (opsional)</label>
+                <input type="text" class="form-control form-control-sm" id="balasan-<%= l.id %>"
+                  value="<%= l.balasanAdmin || '' %>" placeholder="Tulis balasan untuk pelapor...">
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-sm btn-primary w-100" onclick="updateLaporan(<%= l.id %>)">Simpan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  mulaiPolling()
+
+  async function updateLaporan(id) {
+    const status  = document.getElementById(`status-${id}`).value
+    const balasan = document.getElementById(`balasan-${id}`).value
+
+    const res  = await fetch(`/api/admin/laporan/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, balasanAdmin: balasan })
+    })
+    const data = await res.json()
+    tampilNotifApi(res.ok, data.message)
+
+    if (res.ok) {
+      const badge = document.getElementById(`statusBadge-${id}`)
+      badge.textContent = status
+      badge.className = 'badge ' + (status === 'SELESAI' ? 'badge-lunas' : status === 'DIPROSES' ? 'badge-sebagian' : 'badge-belum')
+    }
+  }
+</script>
+</body>
+</html>

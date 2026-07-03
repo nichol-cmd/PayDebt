@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <%- include('partials/theme-init') %>
+  <title>Profil - PayDebt</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/navbar', { page: 'profil', user }) %>
+
+<div class="container my-4">
+  <div class="row g-4">
+
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header">Profil Saya</div>
+        <div class="card-body">
+          <div class="mb-3 small">
+            <div class="fw-semibold fs-6"><%= profil.name %></div>
+            <div class="text-muted"><%= profil.email %></div>
+            <div class="mt-1">
+              <strong><%= profil._count.followers %></strong> Followers &bull;
+              <strong><%= profil._count.following %></strong> Following
+            </div>
+            <% if (profil.bio) { %><div class="mt-1 fst-italic text-muted"><%= profil.bio %></div><% } %>
+          </div>
+
+          <div id="pesanProfil" class="alert d-none"></div>
+
+          <div class="mb-2">
+            <label class="form-label">Nama</label>
+            <input type="text" class="form-control form-control-sm" id="inputNama" value="<%= profil.name %>">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Bio</label>
+            <input type="text" class="form-control form-control-sm" id="inputBio"
+              value="<%= profil.bio || '' %>" placeholder="Tulis bio kamu...">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="updateProfil()">Simpan Perubahan</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-7">
+      <div class="card mb-3">
+        <div class="card-header">Cari & Follow User</div>
+        <div class="card-body">
+          <div class="input-group mb-2">
+            <input type="text" class="form-control form-control-sm" id="inputCari" placeholder="Cari nama user...">
+            <button class="btn btn-outline-secondary btn-sm" onclick="cariUser()">Cari</button>
+          </div>
+          <div id="hasilCari"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item"><button class="nav-link active" onclick="tampilTab('Following', this)">Following (<%= following.length %>)</button></li>
+            <li class="nav-item"><button class="nav-link" onclick="tampilTab('Followers', this)">Followers (<%= followers.length %>)</button></li>
+          </ul>
+        </div>
+        <div class="card-body">
+
+          <div id="tabFollowing">
+            <% if (following.length === 0) { %>
+              <div class="text-muted small">Belum follow siapapun</div>
+            <% } else { %>
+              <% following.forEach(f => { %>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="small fw-semibold"><%= f.following.name %></span>
+                  <button class="btn btn-sm btn-outline-danger" onclick="unfollowUser(<%= f.following.id %>)">Unfollow</button>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+
+          <div id="tabFollowers" class="d-none">
+            <% if (followers.length === 0) { %>
+              <div class="text-muted small">Belum ada followers</div>
+            <% } else { %>
+              <% followers.forEach(f => { %>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="small fw-semibold"><%= f.follower.name %></span>
+                  <% if (followingIds.includes(f.follower.id)) { %>
+                    <span class="badge bg-secondary">Sudah Difollow</span>
+                  <% } else { %>
+                    <button class="btn btn-sm btn-primary" onclick="followUser(<%= f.follower.id %>)">Follow Back</button>
+                  <% } %>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/main.js"></script><script>
+  mulaiPolling()
+
+  async function updateProfil() {
+    const res  = await fetch('/api/user/profil', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('inputNama').value,
+        bio:  document.getElementById('inputBio').value
+      })
+    })
+    const data = await res.json()
+    tampilPesan('pesanProfil', res.ok ? 'success' : 'danger', data.message)
+    if (res.ok) setTimeout(() => location.reload(), 1000)
+  }
+
+  async function cariUser() {
+    const keyword = document.getElementById('inputCari').value
+    const res     = await fetch(`/api/user/search?nama=${keyword}`)
+    const json    = await res.json()
+    const el      = document.getElementById('hasilCari')
+
+    if (json.data.length === 0) {
+      el.innerHTML = '<div class="text-muted small">Tidak ditemukan</div>'
+      return
+    }
+    el.innerHTML = json.data.map(u => `
+      <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+        <span class="small">${u.name} <span class="text-muted">${u.email}</span></span>
+        <button class="btn btn-sm btn-outline-primary" onclick="followUser(${u.id})">Follow</button>
+      </div>
+    `).join('')
+  }
+
+  async function followUser(id) {
+    const res  = await fetch(`/api/user/follow/${id}`, { method: 'POST' })
+    const data = await res.json()
+    tampilNotifApi(res.ok, data.message)
+    setTimeout(() => location.reload(), 1000)
+  }
+
+  async function unfollowUser(id) {
+    if (!confirm('Unfollow user ini?')) return
+    const res  = await fetch(`/api/user/unfollow/${id}`, { method: 'DELETE' })
+    const data = await res.json()
+    tampilNotifApi(res.ok, data.message)
+    setTimeout(() => location.reload(), 1000)
+  }
+
+  function tampilTab(nama, btn) {
+    document.getElementById('tabFollowing').classList.add('d-none')
+    document.getElementById('tabFollowers').classList.add('d-none')
+    document.getElementById('tab' + nama).classList.remove('d-none')
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'))
+    btn.classList.add('active')
+  }
+</script>
+
+<%- include('partials/footer') %>
+
+</body>
+</html>
